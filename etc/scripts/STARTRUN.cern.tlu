@@ -1,0 +1,3 @@
+#!/bin/sh
+
+DRS=false CMS=false ~/sdvlp/eudaq-drs4/etc/scripts/STARTRUN.cern

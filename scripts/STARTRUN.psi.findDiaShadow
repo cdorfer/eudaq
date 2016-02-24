@@ -1,0 +1,5 @@
+#!/bin/sh
+
+DRS=false ~/sdvlp/eudaq-drs4/etc/scripts/STARTRUN.psi
+sleep 2
+xterm -geom 78x20+1450-30 -hold -e 'ssh -tY pim1 /home/testbeam/sdvlp/drs4/drsosc' &

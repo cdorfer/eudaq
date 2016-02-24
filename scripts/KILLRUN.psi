@@ -1,0 +1,42 @@
+#!/bin/bash
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+RESTORE='\033[0m'
+
+# cleanup of DAQ computer
+PROCESSES="OnlineMonitor.exe  euLog.exe euRun.exe"
+for thisprocess in $PROCESSES
+do
+    echo "Checking if $thisprocess is running... "
+    pid=`pgrep -f $thisprocess`
+    for i in $pid
+    do 
+     if [ $i ]
+     then
+	echo -e "${RED}Killing $thisprocess with pid: $pid ${RESTORE}"
+        killall  $thisprocess 
+	kill -9 $pid
+     fi
+    done
+done
+
+# exit with status message if any process has been killed
+printf '\033[1;32;48mKILLING EUDAQ ON DAQ COMPLETE, MOVING ON TO RAPIDSHARE AND PIM1.\033[0m \n'
+
+
+#continue here for rapidshare, pim1, etc -Christian
+
+echo -e "${RED}Killing       DRS4 @ PiM1 ${RESTORE}"
+ssh -tY pim1 'screen -X -S  "DRS4Screen" kill'
+
+echo -e "${RED}Killing       CMSPixel @ PiM1 ${RESTORE}"
+ssh -tY pim1 'screen -X -S  "CMSPixelScreen" kill'
+
+echo -e "${RED}Killing       TLU @ PiM1 ${RESTORE}"
+ssh -tY pim1 'screen -X -S  "TLUScreen" kill'
+
+echo -e "${RED}Killing       DataCollector @ rapidshare ${RESTORE}"
+ssh -tY rapidshare 'screen -X -S  "DataCollectorScreen" kill'
+
+ssh -tY pim1 "killall screen"
+killall xterm

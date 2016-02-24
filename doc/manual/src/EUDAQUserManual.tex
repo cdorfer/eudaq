@@ -1,0 +1,106 @@
+% !TEX TS-program = pdflatexmk
+\input{src/preamble}
+
+% Insert EUDET document number here:
+\newcommand*\EUDETnum{EUDAQ User Manual}
+
+% PDF info and link colours
+\hypersetup{
+  pdftitle={EUDAQ Software User Manual},
+  pdfauthor={EUDAQ Development Team},
+  pdfsubject={EUDET},
+  pdfkeywords={EUDET, EUDAQ, Software, User Manual},
+  colorlinks=true,
+  linkcolor=black, % \ref \autoref \pageref
+  citecolor=blue, % \cite
+  urlcolor=blue, % \url \href (external)
+  filecolor=blue, % \href (local file)
+}
+
+% Load glossary
+\loadglsentries{src/glossary.tex}
+
+% Headers and Footers
+\titlehead{\EUDETnum}
+\lehead{\EUDETnum}
+\lohead{\EUDETnum}
+\automark{section}
+\rehead{\headmark}
+\rohead{\headmark}
+\chead{}
+\cfoot{\pagemark}
+
+% Title info
+\subject{
+\begin{center}
+\includegraphics[width=0.1\textwidth]{src/images/logo_eudet} \includegraphics[width=0.3\textwidth]{src/images/AIDA_logo_medium}\vspace{.5cm}\\
+\includegraphics[width=0.6\textwidth]{src/images/eudaq_logo}
+\end{center}
+}
+\title{\Large EUDAQ Software User Manual} 
+\author{\normalsize EUDAQ Development Team}
+\input{src/version.tex} % defines the \CMakeLibVersion command which is
+                    % set by CMake to the current EUDAQ version number
+                    % (with git hash tag)
+\date{\normalsize As of \today \\ for EUDAQ version \CMakeLibVersion}
+
+\begin{document}
+
+% Title page
+\maketitle
+\begin{abstract}
+\noindent
+This document provides an overview of the EUDAQ software,
+the data acquisition framework used by the EUDET JRA1 beam telescope.
+It describes how to install and run the DAQ system and use many of the included utility programs,
+and how users may integrate their systems into the EUDAQ framework
+by writing their own Producer and DataConverterPlugin,
+thus allowing them to take advantage of the EUTelescope analysis framework.
+\end{abstract}
+\newpage
+
+% Contents
+% Condense slightly to fit on one page
+\begin{spacing}{0.92}
+\tableofcontents
+\end{spacing}
+
+% Main sections
+\include{src/License}
+\include{src/Introduction}
+\include{src/Installing}
+\include{src/Running}
+\include{src/Producers}
+\include{src/Conversion}
+\include{src/OtherParts}
+\include{src/Reporting}
+\include{src/Contributing}
+
+
+% Appendices
+\appendix
+\include{src/SourceCode}
+\include{src/CompilingOnWindows}
+\include{src/OnlineMonConfig}
+
+
+\printglossaries
+
+\section*{Acknowledgements}
+This work is supported by the Commission of the European Communities
+under the 6\textsuperscript{th} Framework Programme
+``Structuring the European Research Area,'' contract number
+RII3--026126.
+
+The research leading to these results has received funding from the
+European Commission under the FP7 Research Infrastructures project
+AIDA, grant agreement no. 262025. The support is gratefully
+acknowledged. 
+\emph{Disclaimer}: The information herein only reflects the views of its authors and not those of the European Commission and no warranty expressed or implied is made with regard to such information or its use.
+
+
+%\bibliographystyle{unsrt}
+\bibliographystyle{src/ClassicCite}
+\bibliography{src/References}
+
+\end{document}

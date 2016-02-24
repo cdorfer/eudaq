@@ -1,0 +1,8 @@
+rm -rf bin
+mkdir bin
+
+rm -rf lib
+mkdir lib
+
+rm -rf build
+mkdir build

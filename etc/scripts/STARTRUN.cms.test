@@ -1,0 +1,60 @@
+#!/bin/sh
+
+export HOSTNAME=pim1
+export ROOTSYS=/usr/local/bin/root
+export RCPORT=44000
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/sdvlp/eudaq-drs4/bin
+
+
+echo $(pwd)
+echo 'STARTING DAQ'
+echo '    Cleaning up first...'
+./KILLRUN
+cd bin/
+
+sleep 1
+echo '    Making sure all data files are properly writeprotected'
+chmod a=r ../data/run*.raw
+echo '\033[1;32;48m    ...Done!\033[0m'
+#cd bin
+echo 'pwd' $(pwd)
+ls
+
+echo '    Starting Subprocesses'
+
+echo '        RunControl'
+./euRun.exe -x 0 -y 0 -w 458 -g 437 -a tcp://$RCPORT  &
+sleep 1.5
+
+echo '        LogCollector'
+./euLog.exe -l DEBUG -x 512 -y 0 -w 1388 -g 438 -r  tcp://$HOSTNAME:$RCPORT &
+sleep 1.5
+
+echo '        DataCollector'
+./TestDataCollector.exe -r tcp://$HOSTNAME:$RCPORT &
+sleep 1
+
+#echo '        CMSPixelProducer'
+#./CMSPixelProducer.exe -r tcp://$HOSTNAME:$RCPORT &
+#sleep 1
+
+#echo '        TLU'
+#./TLUProducer.exe -r tcp://$HOSTNAME:$RCPORT &
+
+#echo '        OnlineMonitor'
+#./OnlineMon.exe -sc 1 -u 500 -f 7 -r tcp://$HOSTNAME:$RCPORT  &
+#sleep 1
+
+#ssh -X -Y eudet@$EUDRBIP1 "(xterm -sb -sl 1000 -geom 80x10-500-169 -fn fixed -T 'EUDRB Producer 1' -e 'cd eudaq/bin/; ./EUDRBProducer.exe -n EUDRB1 -r $HOSTNAME:$RCPORT | tee log')" &
+
+#sleep 1
+
+#echo '        EUDRB 2'
+#ssh -X -Y eudet@$EUDRBIP2 "(xterm -sb -sl 1000 -geom 80x10-500-20 -fn fixed -T 'EUDRB Producer 2' -e 'cd eudaq/bin/; ./EUDRBProducer.exe -n EUDRB2 -r $HOSTNAME:$RCPORT | tee log')" &
+
+
+cd -
+echo '\033[1;32;48m\t ...Done!\033[0m'
+echo '\033[1;32;48mSTART OF DAQ COMPLETE\033[0m'
+

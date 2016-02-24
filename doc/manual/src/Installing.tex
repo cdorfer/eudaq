@@ -1,0 +1,305 @@
+% !TEX root = EUDAQUserManual.tex
+\section{Installing EUDAQ}
+
+\subsection{Overview}
+EUDAQ has relatively few dependencies on other software, but some
+features do rely on other packages.
+To configure the EUDAQ build process, the CMake cross-platform, open-source build system is used.
+To compile EUDAQ from source code requires a compiler that implements
+the C++11 standard.
+The libusb library is only needed to communicate over USB with a \gls{TLU}\cite{Cussans2009}.
+The VME driver is only needed for reading out \glspl{EUDRB}\cite{Cotta2008}
+via VME with a Motorola MVME6100 single board computer.
+The other dependencies are only needed for running the DAQ, and not for the common library
+(for example if you only want to perform data analysis,
+or write a custom Producer to run in the EUDET telescope,
+but not run the whole DAQ yourself).
+
+\subsection{CMake}
+In order to automatically generate configuration files for the build
+process of EUDAQ both compiler and platform independent, the CMake
+build system is used.
+
+CMake is available for all major operating systems from
+\url{http://www.cmake.org/cmake/resources/software.html}. On most
+Linux distributions, it can usually be installed via the built-in
+package manager (aptitude/apt-get/yum etc.) and on OSX using
+packages provided by e.g. the MacPorts or Fink projects.
+
+\subsection{C++11 compliant compiler}
+The compilation of the EUDAQ source code requires a C++11 compliant
+compiler and has been tested with GCC (at
+least version 4.6), Clang (at least version 3.1), and MSVC (Visual
+Studio 2012 and later) on Linux, OS X and Windows.
+
+If you are using Scientific Linux, please install the \emph{Developer
+  Toolset} available e.g. from
+\url{http://linux.web.cern.ch/linux/devtoolset/} to get access to a
+GCC version which fully implements C++11.
+
+\subsubsection{libusb}
+In order to communicate with a \gls{TLU}, the libusb library is needed.
+Therefore, if you want to compile the \texttt{TLU} subdirectory, you should make sure that libusb is properly installed.
+
+On Mac OS X, this can be installed using Fink or MacPorts.
+If using MacPorts you may also need to install the \texttt{libusb-compat} package.
+On Linux it may already be installed,
+otherwise you should use the built-in package manager to install it.
+Make sure to get the development version, which may be named \texttt{libusb-devel} instead of simply \texttt{libusb}.
+On Windows, libusb is only needed if compiling with cygwin,
+in which case you should use the cygwin installer to install libusb.
+Otherwise libusb is not needed, as the included ZestSC1 libraries should work as they are.
+
+
+\subsubsection{ZestSC1 drivers and TLU firmware files}
+Additonally to the libusb library, the \gls{TLU} producer requires the
+ZestSC1 driver package and the FPGA firmware bitfiles; these are
+available to download via AFS from DESY. If AFS is accessible on the machine
+when CMake is run, the necessary files will be installed
+automatically; otherwise, manually copy full folder with
+sub-directories from
+\texttt{/afs/desy.de/group/telescopes/tlu/ZestSC1} and
+\texttt{/afs/desy.de/group/telescopes/tlu/tlufirmware} into the
+./extern subfolder in your EUDAQ source directory.
+
+
+\subsubsection{VME driver}
+In order to communicate with the \gls{EUDRB} boards a VME library is needed.
+A kernel module is included for the Tsi148 VME bridge,
+for use on a Motorola MVME6100, in the \texttt{extern/Tsi148} subdirectory.
+Installation of this module is beyond the scope of this document.
+
+The \texttt{vme} subdirectory includes code for accessing the VME bus with the Tsi148 module.
+In principle other VME bridges could be used,
+you just need to write a C++ class that inherits from the VMEInterface class
+and implements the necessary methods (look at the TSI148Interface class for an example).
+
+\subsubsection{Qt}
+The graphical interface of EUDAQ uses the Qt graphical framework.
+In order to compile the \texttt{gui} subdirectory, you must therefore have Qt installed.
+It is available in most Linux distributions as the package \texttt{qt4-devel},
+but make sure the version is at least 4.4, since there are a few issues with earlier versions.
+
+If the included version is too old, or on other platforms,
+it can be downloaded from \url{http://qt.nokia.com/downloads}.
+Select the LGPL (free) version, then choose the complete development environment
+(it may also work with just the framework, but this is untested).
+Make sure the \texttt{QTDIR} environment variable is set to the Qt installation directory,
+and the \texttt{\$QTDIR/bin} directory is in your path.
+
+If you are using OSX, the easiest way to install Qt is using the
+packages provided by the MacPorts project (\url{http://www.macports.org/}).
+
+\subsubsection{Root}\label{sec:Root}
+The online monitor, as well as a few command-line utilities (contained in the \texttt{root} subdirectory),
+use the Root package for histogramming.
+It can be downloaded from \url{http://root.cern.ch} or installed via
+your favorite package manager.
+Make sure Root's \texttt{bin} subdirectory is in your path, so that the \texttt{root-config} utility can be run.
+This can be done by sourcing the \texttt{thisroot.sh} (or \texttt{thisroot.ch} for csh-like shells)
+script in the \texttt{bin} directory of the Root installation:
+\begin{listing}[mybash]
+source /path/to/root/bin/thisroot.sh
+\end{listing}
+
+\subsubsection{LCIO / EUTelescope}\label{sec:LCIO-EUTel}
+To enable the writing of \gls{LCIO} files, or the conversion of native files to \gls{LCIO} format,
+eudaq must be linked against the \gls{LCIO} and EUTelescope libraries.
+Detailed instructions on how to install both using the
+\texttt{ilcinstall} scripts can be found at \url{http://eutelescope.web.cern.ch/content/installation}.
+
+The \texttt{EUTELESCOPE} and \texttt{LCIO} environment variables should be set to the
+installation directories of EUTelescope and LCIO respectively.
+This can be done by sourcing the \texttt{build\_env.sh} script as follows:
+\begin{listing}[mybash]
+source /path/to/Eutelescope/build_env.sh
+\end{listing}
+
+\subsection{Downloading the source code}
+The EUDAQ source code is hosted on github. The recommended way to obtain the software is with git,
+since this will allow you to easily update to newer versions.
+The latest version can be checked out with the following command:
+\begin{listing}[mybash]
+git clone https://github.com/eudaq/eudaq.git eudaq
+\end{listing}
+
+This will create the directory \texttt{eudaq}, and download the latest
+development version into it. 
+If you already have a copy installed, and want to update it to the
+latest version, you do not need to clone the repository again, just change to the \texttt{eudaq} directory use the command:
+\begin{listing}[mybash]
+git pull
+\end{listing}
+to update your local copy with all changes commited to the central repository.
+
+Alternatively you can also download a zip file from
+\url{https://github.com/eudaq/eudaq/archive/master.zip}.
+
+For production environments (e.g. testbeams) we strongly recommend to
+use the latest release version. Use the command \texttt{git tag} in
+the repository to find the newest version and type e.g. 
+\begin{listing}[mybash]
+git checkout tags/v01-01-00
+\end{listing}
+to change to version 1.1.0.
+
+\subsection{Configuring via CMake}
+CMake supports out-of-source configurations and builds -- just enter
+the './build' directory and run CMake, i.e.
+\begin{listing}[mybash]
+cd build
+cmake ..
+\end{listing}
+
+CMake automatically searches for all required packages and verifies
+that all dependencies are met using the \texttt{CMakeLists.txt} script in the
+main folder. By default, only the central shared library, the main
+executables and (if Qt4 or Qt5 have been found) the graphical user
+interface (GUI) are configured for compilation. You can modify this
+default behavior by passing the \texttt{BUILD\_[name]} option to
+CMake where \texttt{[name]} refers to an optional component, e.g.
+\begin{listing}[mybash]
+cmake -D BUILD_gui=OFF -D BUILD_tlu=ON ..
+\end{listing}
+to disable the GUI but enable additionally the TLU producer and
+executables.
+
+The corresponding settings are cached, so that they will be again used
+next time CMake is run.
+
+Some of the optional packages and producers include:
+\begin{description}
+
+\ttitem{main}
+The common library, and some command-line programs that depend on only this library
+
+\ttitem{tlu}
+The \gls{TLU} library, and the command-line programs that depend on
+it. Requires libusb, ZestSC1 drivers, and the TLU firmware files.
+
+\ttitem{gui}
+The graphical parts of the DAQ, such as the Run Control and Log
+Collector. Require Qt to be installed.
+
+\ttitem{onlinemon}
+The Root Online Monitor. Requires Root to be installed.
+
+\ttitem{nreader}
+The native reader Marlin processor used for data conversion into LCIO
+by EUTelescope. Requires LCIO and EUTelescope to be installed.
+
+\texttt{manual}
+This manual compiled from its \LaTeX sources. Requires a working
+\LaTeX installation.
+
+\end{description}
+
+The producers are stored in the \texttt{./producer} subdirectory and
+include: \texttt{altro}, \texttt{altroUSB}, \texttt{depfet},
+\texttt{eudrb}, \texttt{fortis}, \texttt{mimoroma}, \texttt{mvd},
+\texttt{pixelmanproducer}, and \texttt{taki}. These are
+user-contributed producers for specific detectors inside the EUDET
+telescope.  They should not be compiled unless needed.
+
+A short description of selected producers:
+\begin{description}
+
+\ttitem{producers/eudrb}
+The code for accessing EUDRB boards over VME.  Depends
+on the vme library which will be automatically built
+when \texttt{eudrb} is enabled. This should only be compiled on an
+MVME6100 single-board computer, as it is only compatible with the
+Tundra Tsi148 VME bridge, and PPC processors.
+\end{description}
+
+
+
+To install the binaries and the library outside the source tree, you
+need to set the \texttt{INSTALL\_PREFIX} option, e.g.
+\begin{listing}[mybash]
+cmake -D INSTALL_PREFIX=/usr/local ..
+\end{listing}
+to install the executables into the \texttt{bin} and the library into \texttt{lib} subdirectories of \texttt{/usr/local}.
+
+If you ever need to, you can safely remove all files from the build folder
+as it only contains automatically generated files. Just run
+\begin{listing}[mybash]
+cd build
+rm -rf *
+\end{listing}
+to start from scratch.
+
+
+\subsection{Compilation on Linux/OSX}
+You should just have to run the command:
+\begin{listing}[mybash]
+make install
+\end{listing}
+
+from the top EUDAQ directory to compile the common library,
+along with some command-line programs (the contents of the \texttt{./main/exe} subdirectory).
+If other parts are needed, you can specify them as arguments to the
+CMake command during the configuration step.
+
+The executable binaries and the common shared library will be installed by default into the
+\texttt{bin} and \texttt{lib} directories in the source tree,
+respectively. If you would like to install into a different location,
+please set the respective parameter during the CMake configuration.
+
+\subsection{Setup and Compilation on Windows using Visual~Studio}
+
+This section gives a short overview on the steps needed to compile the
+project under Windows (tested under Windows 7, 32-bit). For a more
+detailed introduction to the Windows build system and Visual~Studio
+project files see the appendix~\ref{app:compileOnWindows} on
+page~\pageref{app:compileOnWindows}.
+
+\begin{itemize}
+\item Prerequisites: 
+\begin{itemize}
+\item Download Qt4 or Qt5:
+\item Download and install the pthreads library (pre-build binary from
+  \url{ftp://sources.redhat.com/pub/pthreads-win32}) into either
+  \texttt{c:\\pthreads-w32} or \texttt{./extern/pthreads-w32}
+\item Download Visual Studio Express Desktop (e.g. 2013 Version):
+  \url{http://www.microsoft.com/en-us/download/details.aspx?id=40787}
+\end{itemize}
+
+\item Start the Visual Studio \emph{Developer Command Prompt} from the
+  Start~Menu entries for Visual~Studio (Tools subfolder) which opens a
+  \texttt{cmd.exe} session with the necessary environment variables
+  already set. If your Qt installation has not been added to the
+  global \texttt{\%PATH\%} variable, you need to execute the \texttt{qtenv2.bat} batch file (or similar) in the Qt folder, e.g.
+  
+  \begin{listing}[mybash]
+C:\Qt\Qt5.1.1\5.1.1\msvc2012\bin\qtenv2.bat
+\end{listing}
+Replace "5.1.1" with the version string of your Qt installation.
+
+\item Now clone the EUDAQ repository (or download using GitHub) and enter the build directory on the prompt, e.g. by entering
+
+  \begin{listing}[mybash]
+cd c:\Users\[username]\Documents\GitHub\eudaq\build
+\end{listing}
+
+\item Configuration: Now enter
+
+  \begin{listing}[mybash]
+cmake ..
+\end{listing}
+
+to generate the VS project files.
+
+\item Compile by calling
+  \begin{listing}[mybash]
+MSBUILD.exe EUDAQ.sln /p:Configuration=Release
+\end{listing}
+or install into \texttt{eudaq\\bin} by running
+  \begin{listing}[mybash]
+MSBUILD.exe INSTALL.vcxproj /p:Configuration=Release
+\end{listing}
+\item This will compile the main library and the GUI; for the remaining processors, please check the individual documentation.
+\end{itemize}
+
+Note on ``\emph{moc.exe - System Error: The program can't start
+  because MSVCP110.dll is missing from your computer}'' errors: when using Visual~Express~2013 and \texttt{pthreads-w32} 2.9.1, you might require ``Visual C++ Redistributable for Visual Studio 2012'': download (either x86 or x64) from \url{http://www.microsoft.com/en-us/download/details.aspx?id=30679} and install.
