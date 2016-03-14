@@ -13,11 +13,9 @@
 using namespace std;
 #include <libconfig.h++>
 using namespace libconfig;
-
     trigger_controll::trigger_controll()
     {
         parser = new(http_responce_pars);
-        //this->ip_adr = "192.168.0.10";
         this->ip_adr = "192.168.1.120";
     }
     void trigger_controll::set_scintillator_delay(int d)
@@ -382,6 +380,28 @@ using namespace libconfig;
         sprintf(str,"/a?j=%d",delay);
         return this->http_backend(str);
     }
+    /* the phase ctl of the 40MHz clk is set by 2 ___bit numbers packed in to one 16bit int
+     */
+    int trigger_controll::set_clk40_phases(int phases)
+    {
+        char str[32];
+        sprintf(str,"/a?u=%d",phases);
+        return this->http_backend(str);
+    }
+    /*delay 1 & 2 are packed in to a 32 bit int 11 downto 0 = delay 1
+     * bit 23 downto 12 = delay 2 */
+    int trigger_controll::set_trigger_12_delay(int delay)
+    {
+        char str[32];
+        sprintf(str,"/a?v=%d",delay);
+        return this->http_backend(str);
+    }
+    int trigger_controll::set_trigger_3_delay(int delay)
+    {
+        char str[32];
+        sprintf(str,"/a?w=%d",delay);
+        return this->http_backend(str);
+    }
     void trigger_controll::set_ip_adr(std::string ip_address)
     {
         this->ip_adr = ip_address;
@@ -420,7 +440,7 @@ using namespace libconfig;
             root.lookupValue("ip_adr",str);
            ip_adr = str;
         }else{
-            ip_adr = "192.168.0.10";
+            ip_adr = "192.168.1.120";
         }
         if( root.exists("delays")) //make a default config file if settings donot exists
         {
@@ -585,6 +605,24 @@ using namespace libconfig;
         {
             root.lookupValue("handshake_delay", i) ;
             if(set_handshake_delay(i))
+                return 1;
+        }
+        int delay = 0;
+        if(root.exists("trig_1_delay"))
+        {
+            root.lookupValue("trig_1_delay", delay) ;
+        }
+        if(root.exists("trig_2_delay"))
+        {
+            root.lookupValue("trig_2_delay", i) ;
+            delay = (delay & 0x0FF) | i <<12;
+            if(set_trigger_12_delay(delay))
+                return 1;
+        }
+        if(root.exists("trig_3_delay"))
+        {
+            root.lookupValue("trig_3_delay", i) ;
+            if(set_trigger_3_delay(i))
                 return 1;
         }
         this->set_time();//send the curent time stamp

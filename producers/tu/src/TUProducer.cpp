@@ -205,14 +205,14 @@ void TUProducer::MainLoop(){
 				}
 				auto elapsed0 = std::chrono::high_resolution_clock::now() - start0;
 				long long readout = std::chrono::duration_cast<std::chrono::microseconds>(elapsed0).count();
-				std::cout << readout;
+				//std::cout << readout;
 
 
 
 				//check if eventnumber has changed since last readout:
 				if(coincidence_count != prev_coincidence_count){
 				
-					/*
+					
 					std::cout << "Coincidence count without scintillator: " << coincidence_count_no_sin << std::endl;
 					std::cout << "Coincidence count: " << coincidence_count << std::endl;
 					std::cout << "Beam current: " << cal_beam_current << std::endl;
@@ -220,7 +220,7 @@ void TUProducer::MainLoop(){
 					std::cout << "Prescaler XOR Pulser count: " << prescaler_count_xor_pulser_count << std::endl;
 					std::cout << "Handshake count: " << handshake_count << std::endl;
 					std::cout << "Timestamp: " << time_stamps[1] << std::endl << std::endl << std::endl;
-					*/
+					
 
 					//send fake events for events we are missing out between readout cycles
 					if(coincidence_count > m_ev_prev){
@@ -274,7 +274,6 @@ void TUProducer::MainLoop(){
 		}
 	}while (!done);
 }
-
 
 
 

@@ -14,12 +14,12 @@ static const char * statuses[] = {
   "RUN",       "Run Number",
   "EVENT",     "Events Built",
   "FULLRATE",  "Rate",
-  "TRIG",      "Triggers",
+  "TRIG",      "TU Triggers",
   "FILEBYTES", "File Bytes",
   "PARTICLES", "Particles",
-  "TLUSTAT",   "TLU Status",
+// "PARTICLES", "Coincidences",
+  "TUSTAT",   "TU Status",
   "SCALERS",   "Scalers",
-  0
 };
  
 euRunApplication::euRunApplication(int& argc, char** argv) :
@@ -149,6 +149,7 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress,
   setWindowTitle("eudaq Run Control " PACKAGE_VERSION);
 }
 
+
 void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<eudaq::Status> status) {
   static bool registered = false;
   if (!registered) {
@@ -159,15 +160,16 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
     m_filebytes = from_string(status->GetTag("FILEBYTES"), 0LL);
     EmitStatus("EVENT", status->GetTag("EVENT"));
     EmitStatus("FILEBYTES", to_bytes(status->GetTag("FILEBYTES")));
-  } else if (id.GetType() == "Producer" && id.GetName() == "TLU") {
+  } else if (id.GetType() == "Producer" && id.GetName() == "TU") {
     EmitStatus("TRIG", status->GetTag("TRIG"));
     EmitStatus("PARTICLES", status->GetTag("PARTICLES"));
+   // EmitStatus("PARTICLES", status->GetTag("PARTICLES"));
     EmitStatus("TIMESTAMP", status->GetTag("TIMESTAMP"));
     EmitStatus("LASTTIME", status->GetTag("LASTTIME"));
-    EmitStatus("TLUSTAT", status->GetTag("STATUS"));
+    EmitStatus("TUSTAT", status->GetTag("STATUS"));
     bool ok = true;
     std::string scalers;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 10; ++i) {
       std::string s = status->GetTag("SCALER" + to_string(i));
       if (s == "") {
         ok = false;
@@ -205,6 +207,7 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
   m_run.SetStatus(id, *status);
 }
 
+
 void RunControlGUI::OnConnect(const eudaq::ConnectionInfo & id) {
   static bool registered = false;
   if (!registered) {
@@ -219,9 +222,10 @@ void RunControlGUI::OnConnect(const eudaq::ConnectionInfo & id) {
     SetState(ST_NONE);
   }
   if (id.GetType() == "LogCollector") {
-  	 btnLogSetStatus(true);
+     btnLogSetStatus(true);
   }
 }
+
 
 bool RunControlGUI::eventFilter(QObject *object, QEvent *event) {
   if (object == txtGeoID && event->type() == QEvent::MouseButtonDblClick) {
