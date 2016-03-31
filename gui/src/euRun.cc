@@ -11,21 +11,40 @@
 #include "config.h" // for version symbols
 
 static const char * statuses[] = {
-  "RUN",       "Run Number",
-  "EVENT",     "Events Built",
-  "FULLRATE",  "Rate",
-  "TRIG",      "TU Triggers",
-  "FILEBYTES", "File Bytes",
-  "PARTICLES", "Particles",
-// "PARTICLES", "Coincidences",
-  "TUSTAT",   "TU Status",
-  "SCALERS",   "Scalers",
+  "RUN",        "Run Number",
+  "EVENT",      "Events Built",
+  "FULLRATE",   "Rate",
+  "TRIG",       "TU Triggers",
+  "FILEBYTES",  "File Size",
+  "PARTICLES",  "Particles",
+  "TUSTAT",     "TU Status",
+  "MEANRATE",   "Meanrate",
+  "RATE",       "Rate",
+  "BEAM",       "Beam Current",
+  0
 };
- 
+
+//defined for layout reasons
+static const char * scalers[] = {
+  "SC0",      "Scintillator",
+  "SC5",        "Plane 5",
+  "SC1",        "Plane 1",
+  "SC6",        "Plane 6",
+  "SC2",        "Plane 2",
+  "SC7",        "Plane 7",
+  "SC3",        "Plane 3",
+  "SC8",        "Plane 8",
+  "SC4",        "Plane 4",
+  "SC9",        "Pad",
+  0
+};
+
+
 euRunApplication::euRunApplication(int& argc, char** argv) :
     QApplication(argc, argv) {}
     
-    
+  
+
 bool euRunApplication::notify(QObject* receiver, QEvent* event) {
     bool done = true;
     try {
@@ -42,6 +61,9 @@ bool euRunApplication::notify(QObject* receiver, QEvent* event) {
     }
     return done;
 } 
+
+
+
 
 int main(int argc, char ** argv) {
   euRunApplication app(argc, argv);
@@ -77,7 +99,12 @@ namespace {
   static const char * GEOID_FILE = "GeoID.dat";
 }
 
+
+
 RunConnectionDelegate::RunConnectionDelegate(RunControlModel * model) : m_model(model) {}
+
+
+
 
 void RunConnectionDelegate::paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const {
   //std::cout << __FUNCTION__ << std::endl;
@@ -88,38 +115,57 @@ void RunConnectionDelegate::paint(QPainter * painter, const QStyleOptionViewItem
   //painter->restore();
 }
 
-RunControlGUI::RunControlGUI(const std::string & listenaddress,
-    QRect geom,
-    QWidget *parent,
-    Qt::WindowFlags flags)
-: QMainWindow(parent, flags),
-  eudaq::RunControl(listenaddress),
-  m_delegate(&m_run),
-  m_prevtrigs(0),
-  m_prevtime(0.0),
-  m_runstarttime(0.0),
-  m_filebytes(0),
-  dostatus(false)
-{
+
+
+
+RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWidget *parent, Qt::WindowFlags flags):
+  QMainWindow(parent, flags), eudaq::RunControl(listenaddress), m_delegate(&m_run), m_prevtrigs(0), m_prevtime(0.0), m_runstarttime(0.0),m_filebytes(0),dostatus(false){
+
   setupUi(this);
+
   if (!grpStatus->layout()) grpStatus->setLayout(new QGridLayout(grpStatus));
   QGridLayout * layout = dynamic_cast<QGridLayout *>(grpStatus->layout());
   int row = 0, col = 0;
-  for (const char ** st = statuses; st[0] && st[1]; st += 2) {
-    QLabel * lblname = new QLabel(grpStatus);
+  for (const char **st = statuses; st[0] && st[1]; st += 2){
+
+      QLabel *lblname = new QLabel(grpStatus);
+      lblname->setObjectName(QString("lbl_st_") + st[0]);
+      lblname->setText((std::string(st[1]) + ": ").c_str());
+      QLabel *lblvalue = new QLabel(grpStatus);
+      lblvalue->setObjectName(QString("txt_st_") + st[0]);
+      //lblvalue->setText("");
+      layout->addWidget(lblname, row, col*2);
+      layout->addWidget(lblvalue, row, col*2+1);
+      m_status[st[0]] = lblvalue;
+      if (++col > 1) {
+        ++row;
+        col = 0;
+      }
+  }
+
+  //added by CD
+  if (!scalerStatus->layout()) scalerStatus->setLayout(new QGridLayout(scalerStatus));
+  QGridLayout *scaler_layout = dynamic_cast<QGridLayout *>(scalerStatus->layout());
+  int srow = 0, scol = 0;
+  for (const char ** st = scalers; st[0] && st[1]; st += 2) {
+    QLabel * lblname = new QLabel(scalerStatus);
     lblname->setObjectName(QString("lbl_st_") + st[0]);
+    //lblname->setTextFormat(Qt::PlainText);
     lblname->setText((std::string(st[1]) + ": ").c_str());
-    QLabel * lblvalue = new QLabel(grpStatus);
+    QLabel * lblvalue = new QLabel(scalerStatus);
     lblvalue->setObjectName(QString("txt_st_") + st[0]);
     //lblvalue->setText("");
-    layout->addWidget(lblname, row, col*2);
-    layout->addWidget(lblvalue, row, col*2+1);
+    scaler_layout->addWidget(lblname, srow, scol*2);
+    scaler_layout->addWidget(lblvalue, srow, scol*2+1);
     m_status[st[0]] = lblvalue;
-    if (++col > 1) {
-      ++row;
-      col = 0;
+    if (++scol > 1) {
+      ++srow;
+      scol = 0;
     }
   }
+  //end added by CD
+
+
   viewConn->setModel(&m_run);
   viewConn->setItemDelegate(&m_delegate);
   QDir dir("../conf/", "*.conf");
@@ -146,8 +192,12 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress,
   txtGeoID->setText(QString::number(eudaq::ReadFromFile(GEOID_FILE, 0U)));
   txtGeoID->installEventFilter(this);
   setWindowIcon(QIcon("../images/Icon_euRun.png"));
-  setWindowTitle("eudaq Run Control " PACKAGE_VERSION);
+  setWindowTitle("ETH/PSI Run Control based on eudaq " PACKAGE_VERSION);
 }
+
+
+
+
 
 
 void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<eudaq::Status> status) {
@@ -160,25 +210,28 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
     m_filebytes = from_string(status->GetTag("FILEBYTES"), 0LL);
     EmitStatus("EVENT", status->GetTag("EVENT"));
     EmitStatus("FILEBYTES", to_bytes(status->GetTag("FILEBYTES")));
+
   } else if (id.GetType() == "Producer" && id.GetName() == "TU") {
     EmitStatus("TRIG", status->GetTag("TRIG"));
-    EmitStatus("PARTICLES", status->GetTag("PARTICLES"));
-   // EmitStatus("PARTICLES", status->GetTag("PARTICLES"));
     EmitStatus("TIMESTAMP", status->GetTag("TIMESTAMP"));
     EmitStatus("LASTTIME", status->GetTag("LASTTIME"));
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
-    bool ok = true;
+
+
     std::string scalers;
     for (int i = 0; i < 10; ++i) {
       std::string s = status->GetTag("SCALER" + to_string(i));
-      if (s == "") {
-        ok = false;
+      if (s == "") 
         break;
+      std::string s_name = "SC"+to_string(i);
+      EmitStatus(s_name.c_str(), s);
+
       }
-      if (scalers != "") scalers += ", ";
-      scalers += s;
     }
-    if (ok) EmitStatus("SCALERS", scalers);
+
+
+
+
     int trigs = from_string(status->GetTag("TRIG"), -1);
     double time = from_string(status->GetTag("TIMESTAMP"), 0.0);
     if (trigs >= 0) {
@@ -189,6 +242,8 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
       } else {
         EmitStatus("MEANRATE", to_string((trigs-1)/(time-m_runstarttime)) + " Hz");
       }
+
+
       int dtrigs = trigs - m_prevtrigs;
       double dtime = time - m_prevtime;
       if (dtrigs >= 10 || dtime >= 1.0) {
@@ -202,8 +257,7 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
         EmitStatus("FULLRATE", to_string((trigs-1)/(time-m_runstarttime)) + " (" + to_string(dtrigs/dtime) + ") Hz");
       }
     }
-  }
-
+  
   m_run.SetStatus(id, *status);
 }
 

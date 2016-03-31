@@ -135,11 +135,12 @@ Readout_Data * Triger_Logic_tpc_Stream::timer_handler ()
         puts("recv failed");
         return NULL;
     }
-    puts(server_reply);
+   //puts(server_reply);
    Readout_Data * readout;
    readout = pars_stream_ret(server_reply);
 	   if(readout !=NULL)
-           dump_readout(readout);
+           //dump_readout(readout);
+          ;
 	    else
 	        puts("pars failed");
         return readout;
@@ -157,15 +158,18 @@ Readout_Data *Triger_Logic_tpc_Stream::pars_stream_ret(char *stream)
     iptr = (unsigned int *) start+4;
     readout->id = *iptr;
     for(i=0;i<4;i++)
-            printf("%d %c %x, \t",i,*(start+i) ,*(start+i));
+            //printf("%d %c %x, \t",i,*(start+i) ,*(start+i));
+            ;
 
-            printf("\n");
+            //printf("\n");
     for(i=4;i<TRIGGER_LOGIC_READBACK_FILE_SIZE;i=i+4)
     {
         iptr = (unsigned int *) (start +i);
-        printf("%d %d, \t",i,*iptr);
+        //printf("%d %d, \t",i,*iptr);
+        ;
         if(i%10==0)
-            printf("\n");
+            //printf("\n");
+          ;
     }
     for(i=0;i<10;i++)
     {

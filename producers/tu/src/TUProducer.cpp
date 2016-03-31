@@ -1,4 +1,15 @@
-//written by dorfer@phys.ethz.ch
+/* ---------------------------------------------------------------------------------
+** OSU Trigger Logic Unit EUDAQ Implementation
+** 
+**
+** <TUProducer>.cpp
+** 
+** Date: March 2015
+** Author: Christian Dorfer (dorfer@phys.ethz.ch)
+** ---------------------------------------------------------------------------------*/
+
+//FIX: conf_name, remove ausgabe, besseres event sending (bitwise), main window, bore event bekommt ganzes config
+
 
 //system includes
 #include <iostream>
@@ -15,6 +26,7 @@
 #include "eudaq/Utils.hh"
 #include "eudaq/Logger.hh"
 #include "eudaq/OptionParser.hh"
+#include "eudaq/RawDataEvent.hh"
 
 //TU includes
 #include "TUProducer.hh"
@@ -50,7 +62,6 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
 
 
 
-
 void TUProducer::OnConfigure(const eudaq::Configuration &conf) {
 	try {
 		SetStatus(eudaq::Status::LVL_OK, "Wait");
@@ -67,16 +78,16 @@ void TUProducer::OnConfigure(const eudaq::Configuration &conf) {
    		std::cout << "Configuring (" << conf.Name() << ").." << std::endl;			
   		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
   		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
-		tc->set_scintillator_delay(conf.Get("scintillator_delay", 0));
-  		tc->set_plane_1_delay(conf.Get("plane_1", 0));
-  		tc->set_plane_2_delay(conf.Get("plane_2", 0));
-  		tc->set_plane_3_delay(conf.Get("plane_3", 0));
-  		tc->set_plane_4_delay(conf.Get("plane_4", 0));
-  		tc->set_plane_5_delay(conf.Get("plane_5", 0));
-  		tc->set_plane_6_delay(conf.Get("plane_6", 0));
-  		tc->set_plane_7_delay(conf.Get("plane_7", 0));
-  		tc->set_plane_8_delay(conf.Get("plane_8", 0));
-  		tc->set_pad_delay(conf.Get("pad_delay", 0));
+		tc->set_scintillator_delay(conf.Get("scintillator_delay", 100));
+  		tc->set_plane_1_delay(conf.Get("plane_1", 100));
+  		tc->set_plane_2_delay(conf.Get("plane_2", 100));
+  		tc->set_plane_3_delay(conf.Get("plane_3", 100));
+  		tc->set_plane_4_delay(conf.Get("plane_4", 100));
+  		tc->set_plane_5_delay(conf.Get("plane_5", 100));
+  		tc->set_plane_6_delay(conf.Get("plane_6", 100));
+  		tc->set_plane_7_delay(conf.Get("plane_7", 100));
+  		tc->set_plane_8_delay(conf.Get("plane_8", 100));
+  		tc->set_pad_delay(conf.Get("pad_delay", 100));
   		tc->set_delays();
 
   		//generate and set a trigger mask
@@ -122,6 +133,15 @@ void TUProducer::OnConfigure(const eudaq::Configuration &conf) {
 		tc->set_handshake_mask(hs_mask);
 		tc->send_handshake_mask();
 
+		int trigdel1 = conf.Get("trig_1_delay", 100);
+		int trigdel2 = conf.Get("trig_2_delay", 100);
+		int trigdel12 = (trigdel1<<12) | trigdel2;
+		tc->set_trigger_12_delay(trigdel12);
+				
+
+		int trigdel3 = conf.Get("trig_3_delay", 100);
+		tc->set_trigger_3_delay(trigdel3);
+		tc->set_delays();
 
 		//set current UNIX timestamp
    		tc->set_time();
@@ -148,12 +168,13 @@ void TUProducer::OnConfigure(const eudaq::Configuration &conf) {
 		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
 
 		std::cout << "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << std::endl;
+
+		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
 	}catch (...){
 		printf("Configuration Error\n");
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
 	}
 }
-
 
 
 
@@ -173,8 +194,10 @@ void TUProducer::MainLoop(){
 		}
 			    	
 		if(TUStarted || TUJustStopped){
-			eudaq::mSleep(10); //readout sleep 100ms, anything lower than that slows down the whole network
-			auto start0 = std::chrono::high_resolution_clock::now();
+			eudaq::mSleep(1000); //only read out every second
+			
+			//auto start0 = std::chrono::high_resolution_clock::now(); //debugging
+
 			Readout_Data *rd;
 			rd = stream->timer_handler();
 			if (rd){
@@ -203,10 +226,10 @@ void TUProducer::MainLoop(){
 					trigger_counts[idx] = trigger_counts_multiplicity[idx]*bit_16 + new_tc;
 					input_frequencies[idx] = 1000*(trigger_counts[idx] - prev_trigger_counts[idx])/(time_stamps[1] - time_stamps[0]);
 				}
-				auto elapsed0 = std::chrono::high_resolution_clock::now() - start0;
-				long long readout = std::chrono::duration_cast<std::chrono::microseconds>(elapsed0).count();
-				//std::cout << readout;
 
+				//auto elapsed0 = std::chrono::high_resolution_clock::now() - start0;//debugging
+				//long long readout = std::chrono::duration_cast<std::chrono::microseconds>(elapsed0).count();//debugging
+				//std::cout << readout;
 
 
 				//check if eventnumber has changed since last readout:
@@ -221,49 +244,50 @@ void TUProducer::MainLoop(){
 					std::cout << "Handshake count: " << handshake_count << std::endl;
 					std::cout << "Timestamp: " << time_stamps[1] << std::endl << std::endl << std::endl;
 					
-
 					//send fake events for events we are missing out between readout cycles
 					if(coincidence_count > m_ev_prev){
 						int tmp =0;
-						auto start1 = std::chrono::high_resolution_clock::now();
+						//auto start1 = std::chrono::high_resolution_clock::now();//debugging
 						for (unsigned int id = m_ev_prev; id < coincidence_count; id++){
-							TUEvent f_ev(m_run, id, 0); 
+							eudaq::RawDataEvent f_ev(event_type, m_run, id);
 							f_ev.SetTag("valid", std::to_string(0));
 							SendEvent(f_ev);
 							tmp++;
 							//std::cout << "----- fake event " << id << " sent." << std::endl;
 						}
-					    auto elapsed1 = std::chrono::high_resolution_clock::now() - start1;
-						long long fakes = std::chrono::duration_cast<std::chrono::microseconds>(elapsed1).count();
-						std::cout << " " << fakes << "(" << tmp << ")";
+					    //auto elapsed1 = std::chrono::high_resolution_clock::now() - start1; //debugging
+						//long long fakes = std::chrono::duration_cast<std::chrono::microseconds>(elapsed1).count();//debugging
+						//std::cout << " " << fakes << "(" << tmp << ")"; //debugging
 					}
+					//auto start2 = std::chrono::high_resolution_clock::now();
 
-			     
-					auto start2 = std::chrono::high_resolution_clock::now();
-					int64_t ts = (int64_t) time_stamps[1]; //type required by EUDAQ
+					int64_t ts = (int64_t) time_stamps[1]; //type required by EUDAQ 
 					m_ev = coincidence_count;
-					TUEvent ev(m_run, m_ev, ts);
+					
+					//real data event
+					eudaq::RawDataEvent ev(event_type, m_run, m_ev); //generate a raw event
 					ev.SetTag("valid", std::to_string(1));
-					ev.SetTag("coincidence_count_no_sin", std::to_string(coincidence_count_no_sin));
-					ev.SetTag("coincidence_count", std::to_string(coincidence_count));
-					ev.SetTag("cal_beam_current", std::to_string(cal_beam_current));
-					ev.SetTag("prescaler_count", std::to_string(prescaler_count));
-					ev.SetTag("prescaler_count_xor_pulser_count", std::to_string(prescaler_count_xor_pulser_count));
-					ev.SetTag("handshake_count", std::to_string(handshake_count));
-					//for(int idx=0; idx<10; idx++){
-					//	ev.SetTag("scaler" + std::to_string(idx), std::to_string(trigger_counts[idx]));
-					//}
-					SendEvent(ev);
-					//std::cout << "##### real event " << m_ev << "sent." << std::endl;
-					auto elapsed2 = std::chrono::high_resolution_clock::now() - start2;
-					long long real = std::chrono::duration_cast<std::chrono::microseconds>(elapsed2).count();
-					std::cout << " " << real << std::endl;
-					std::cout << std::endl;
-					m_ev_prev = m_ev+1;
+        			unsigned int block_no = 0;
+        			ev.AddBlock(block_no, reinterpret_cast<const char*>(&ts), sizeof(ts)); //timestamp
+        			block_no++;
+        			ev.AddBlock(block_no, reinterpret_cast<const char*>(&coincidence_count), sizeof(coincidence_count)); //coincidence count
+        			block_no++;
+        			ev.AddBlock(block_no, reinterpret_cast<const char*>(&coincidence_count_no_sin), sizeof(coincidence_count_no_sin)); //coincidence count, no scint
+        			block_no++;
+        			ev.AddBlock(block_no, reinterpret_cast<const char*>(&prescaler_count), sizeof(prescaler_count)); //prescaler_count
+        			block_no++;
+        			ev.AddBlock(block_no, reinterpret_cast<const char*>(&handshake_count), sizeof(handshake_count)); //handshake count
+        			block_no++;
+        			ev.AddBlock(block_no, reinterpret_cast<const char*>(&cal_beam_current), sizeof(cal_beam_current)); //beam current
+        			SendEvent(ev);
+
+        			m_ev_prev = m_ev+1;
 					prev_coincidence_count = coincidence_count;
 				
-				}//end if (prev event count)	
+				}//end if (prev event count)
+
 			}//end if(rd)
+
 		}//end if(TUStarted)
 
 
@@ -274,6 +298,7 @@ void TUProducer::MainLoop(){
 		}
 	}while (!done);
 }
+
 
 
 
@@ -443,3 +468,28 @@ int main(int /*argc*/, const char ** argv) {
 	}
 	return 0;
 }
+
+
+	      			//TUEvent ev(m_run, m_ev, ts);
+					//ev.SetTag("valid", std::to_string(1));
+					//ev.SetTag("coincidence_count_no_sin", std::to_string(coincidence_count_no_sin));
+					//ev.SetTag("coincidence_count", std::to_string(coincidence_count));
+					//ev.SetTag("cal_beam_current", std::to_string(cal_beam_current));
+					//ev.SetTag("prescaler_count", std::to_string(prescaler_count));
+					//ev.SetTag("prescaler_count_xor_pulser_count", std::to_string(prescaler_count_xor_pulser_count));
+					//ev.SetTag("handshake_count", std::to_string(handshake_count));
+					//for(int idx=0; idx<10; idx++){
+					//	ev.SetTag("scaler" + std::to_string(idx), std::to_string(trigger_counts[idx]));
+					//}
+					//SendEvent(ev);
+					//std::cout << "##### real event " << m_ev << "sent." << std::endl;
+					//auto elapsed2 = std::chrono::high_resolution_clock::now() - start2;
+					//long long real = std::chrono::duration_cast<std::chrono::microseconds>(elapsed2).count();
+					//std::cout << " " << real << std::endl;
+					//std::cout << std::endl;
+
+/*
+							TUEvent f_ev(m_run, id, 0); 
+							f_ev.SetTag("valid", std::to_string(0));
+							SendEvent(f_ev);
+							*/

@@ -1,4 +1,14 @@
-//written by dorfer@phys.ethz.ch
+/* ---------------------------------------------------------------------------------
+** OSU Trigger Logic Unit EUDAQ Implementation
+** 
+**
+** <TUProducer>.hh
+** 
+** Date: March 2015
+** Author: Christian Dorfer (dorfer@phys.ethz.ch)
+** ---------------------------------------------------------------------------------*/
+
+
 #ifndef TUPRODUCER_HH
 #define TUPRODUCER_HH
 
