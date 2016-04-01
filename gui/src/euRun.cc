@@ -12,19 +12,16 @@
 
 static const char * statuses[] = {
   "RUN",        "Run Number",
-  "EVENT",      "Events Built",
-  "FULLRATE",   "Rate",
-  "TRIG",       "TU Triggers",
   "FILEBYTES",  "File Size",
-  "PARTICLES",  "Particles",
+  "EVENT",      "DC Events Built",
   "TUSTAT",     "TU Status",
-  "MEANRATE",   "Meanrate",
-  "RATE",       "Rate",
-  "BEAM",       "Beam Current",
+  "COINCCOUNT", "Coincidence Count",
+  "COINCRATE",   "Coincidence Rate",
+  "BEAMCURR",       "Beam Current",
   0
 };
 
-//defined for layout reasons
+//for layout reasons:
 static const char * scalers[] = {
   "SC0",      "Scintillator",
   "SC5",        "Plane 5",
@@ -61,7 +58,6 @@ bool euRunApplication::notify(QObject* receiver, QEvent* event) {
     }
     return done;
 } 
-
 
 
 
@@ -143,7 +139,7 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
       }
   }
 
-  //added by CD
+  //added by cdorfer
   if (!scalerStatus->layout()) scalerStatus->setLayout(new QGridLayout(scalerStatus));
   QGridLayout *scaler_layout = dynamic_cast<QGridLayout *>(scalerStatus->layout());
   int srow = 0, scol = 0;
@@ -163,7 +159,7 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
       scol = 0;
     }
   }
-  //end added by CD
+  //end added
 
 
   viewConn->setModel(&m_run);
@@ -196,28 +192,25 @@ RunControlGUI::RunControlGUI(const std::string & listenaddress, QRect geom, QWid
 }
 
 
-
-
-
-
 void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<eudaq::Status> status) {
   static bool registered = false;
   if (!registered) {
     qRegisterMetaType<QModelIndex>("QModelIndex");
-    registered = true;
-  }
+    registered = true;}
+  
+
   if (id.GetType() == "DataCollector") {
     m_filebytes = from_string(status->GetTag("FILEBYTES"), 0LL);
     EmitStatus("EVENT", status->GetTag("EVENT"));
-    EmitStatus("FILEBYTES", to_bytes(status->GetTag("FILEBYTES")));
+    EmitStatus("FILEBYTES", to_bytes(status->GetTag("FILEBYTES")));} 
+  
 
-  } else if (id.GetType() == "Producer" && id.GetName() == "TU") {
-    EmitStatus("TRIG", status->GetTag("TRIG"));
-    EmitStatus("TIMESTAMP", status->GetTag("TIMESTAMP"));
-    EmitStatus("LASTTIME", status->GetTag("LASTTIME"));
+  else if (id.GetType() == "Producer" && id.GetName() == "TU"){
     EmitStatus("TUSTAT", status->GetTag("STATUS"));
+    EmitStatus("BEAMCURR", status->GetTag("BEAM_CURR") + " mA");
+    EmitStatus("COINCCOUNT", status->GetTag("COINC_COUNT"));
 
-
+    //update Scaler Status
     std::string scalers;
     for (int i = 0; i < 10; ++i) {
       std::string s = status->GetTag("SCALER" + to_string(i));
@@ -225,41 +218,24 @@ void RunControlGUI::OnReceive(const eudaq::ConnectionInfo & id, std::shared_ptr<
         break;
       std::string s_name = "SC"+to_string(i);
       EmitStatus(s_name.c_str(), s);
-
       }
+
+    int c_counts = from_string(status->GetTag("COINC_COUNT"), -1);
+    double ts = from_string(status->GetTag("TIMESTAMP"), 0.0);
+    if(c_counts > 0) m_runstarttime = ts; //start timing
+    double coinc_rate = (c_counts-1)/(ts-m_runstarttime);
+    if (coinc_rate > 1){ //not to display too small numbers
+      EmitStatus("COINCRATE", to_string(coinc_rate)+ " Hz");
+    }else{
+      EmitStatus("COINCRATE", "0 Hz");
     }
 
+  }//end if producer=tu
 
+    m_run.SetStatus(id, *status);
+    
+} //end method
 
-
-    int trigs = from_string(status->GetTag("TRIG"), -1);
-    double time = from_string(status->GetTag("TIMESTAMP"), 0.0);
-    if (trigs >= 0) {
-      bool dorate = true;
-      if (m_runstarttime == 0.0) {
-        if (trigs > 0) m_runstarttime = time;
-        dorate = false;
-      } else {
-        EmitStatus("MEANRATE", to_string((trigs-1)/(time-m_runstarttime)) + " Hz");
-      }
-
-
-      int dtrigs = trigs - m_prevtrigs;
-      double dtime = time - m_prevtime;
-      if (dtrigs >= 10 || dtime >= 1.0) {
-        m_prevtrigs = trigs;
-        m_prevtime = time;
-        EmitStatus("RATE", to_string(dtrigs/dtime) + " Hz");
-      } else {
-        dorate = false;
-      }
-      if (dorate) {
-        EmitStatus("FULLRATE", to_string((trigs-1)/(time-m_runstarttime)) + " (" + to_string(dtrigs/dtime) + ") Hz");
-      }
-    }
-  
-  m_run.SetStatus(id, *status);
-}
 
 
 void RunControlGUI::OnConnect(const eudaq::ConnectionInfo & id) {

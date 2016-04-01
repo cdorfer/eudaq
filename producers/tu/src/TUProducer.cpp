@@ -8,7 +8,7 @@
 ** Author: Christian Dorfer (dorfer@phys.ethz.ch)
 ** ---------------------------------------------------------------------------------*/
 
-//FIX: conf_name, remove ausgabe, besseres event sending (bitwise), main window, bore event bekommt ganzes config
+//FIX:remove ausgabe, besseres event sending (bitwise), main window, bore event bekommt ganzes config
 
 
 //system includes
@@ -22,11 +22,11 @@
 
 //EUDAQ includes
 #include "eudaq/Producer.hh"
-#include "eudaq/Configuration.hh"
 #include "eudaq/Utils.hh"
 #include "eudaq/Logger.hh"
 #include "eudaq/OptionParser.hh"
 #include "eudaq/RawDataEvent.hh"
+#include "eudaq/Configuration.hh"
 
 //TU includes
 #include "TUProducer.hh"
@@ -59,123 +59,6 @@ TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, c
     EUDAQ_ERROR(std::string("Error in the TUProducer class constructor."));
     SetStatus(eudaq::Status::LVL_ERROR, "Error in the TUProducer class constructor.");}
 }
-
-
-
-void TUProducer::OnConfigure(const eudaq::Configuration &conf) {
-	try {
-		SetStatus(eudaq::Status::LVL_OK, "Wait");
-
-		//open stream to TU
-		std::string ip_adr = conf.Get("ip_adr", "192.168.1.120");
-		const char *ip = ip_adr.c_str();
-
-		stream->set_ip_adr(ip);
-   		std::cout << "Opening connection to TU @ " << ip << std::endl;
-   		stream->open();
-
-
-   		std::cout << "Configuring (" << conf.Name() << ").." << std::endl;			
-  		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
-  		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
-		tc->set_scintillator_delay(conf.Get("scintillator_delay", 100));
-  		tc->set_plane_1_delay(conf.Get("plane_1", 100));
-  		tc->set_plane_2_delay(conf.Get("plane_2", 100));
-  		tc->set_plane_3_delay(conf.Get("plane_3", 100));
-  		tc->set_plane_4_delay(conf.Get("plane_4", 100));
-  		tc->set_plane_5_delay(conf.Get("plane_5", 100));
-  		tc->set_plane_6_delay(conf.Get("plane_6", 100));
-  		tc->set_plane_7_delay(conf.Get("plane_7", 100));
-  		tc->set_plane_8_delay(conf.Get("plane_8", 100));
-  		tc->set_pad_delay(conf.Get("pad_delay", 100));
-  		tc->set_delays();
-
-  		//generate and set a trigger mask
-  		trg_mask = conf.Get("pad", 0);
-  		for (unsigned int idx=8; idx>0; idx--){
-  			std::string sname = "plane" + std::to_string(idx);
-  			int tmp = conf.Get(sname, 0);
-  			trg_mask = (trg_mask<<1)+tmp;
-  		}
-  		trg_mask = (trg_mask<<1)+conf.Get("scintillator", 0);
-  		tc->set_coincidence_enable(trg_mask);
-
-
-  		std::cout << "--> Setting prescaler and delay." << std::endl;
-		int scal = conf.Get("prescaler", 1);
-		int predel = conf.Get("prescaler_delay", 5); //must be >4
-		tc->set_prescaler(scal);
-		tc->set_prescaler_delay(predel);
-
-
-		std::cout << "--> Setting pulser frequency, width and delay." << std::endl;
-		double freq = conf.Get("pulser_freq", 0);
-		int width = conf.Get("pulser_width", 0);
-		int puldel = conf.Get("pulser_delay", 5); //must be > 4
-
-		tc->set_Pulser_width(freq, width);
-		tc->set_pulser_delay(puldel);
-
-
-		std::cout << "--> Setting coincidence pulse and edge width." << std::endl;
-		int copwidth = conf.Get("coincidence_pulse_width", 10);
-		int coewidth = conf.Get("coincidence_edge_width", 10);
-		tc->set_coincidence_pulse_width(copwidth);
-		tc->set_coincidence_edge_width(coewidth);
-		tc->send_coincidence_edge_width();
-		tc->send_coincidence_pulse_width();
-
-		int hs_del = conf.Get("handshake_delay", 0);
-		tc->set_handshake_delay(hs_del);
-		tc->send_handshake_delay();
-
-		int hs_mask = conf.Get("handshake_mask", 0);
-		tc->set_handshake_mask(hs_mask);
-		tc->send_handshake_mask();
-
-		int trigdel1 = conf.Get("trig_1_delay", 100);
-		int trigdel2 = conf.Get("trig_2_delay", 100);
-		int trigdel12 = (trigdel1<<12) | trigdel2;
-		tc->set_trigger_12_delay(trigdel12);
-				
-
-		int trigdel3 = conf.Get("trig_3_delay", 100);
-		tc->set_trigger_3_delay(trigdel3);
-		tc->set_delays();
-
-		//set current UNIX timestamp
-   		tc->set_time();
-		eudaq::mSleep(1000);
-		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
-		
-		std::cout << "--> Readback of values" << std::endl;
-		std::cout << "############################################################" << std::endl;
-		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay()*2.5 << std::endl;
-		std::cout << "Plane 1 delay [ns]: " << tc->get_plane_1_delay()*2.5 << std::endl;
-		std::cout << "Plane 2 delay [ns]: " << tc->get_plane_2_delay()*2.5 << std::endl;
-		std::cout << "Plane 3 delay [ns]: " << tc->get_plane_3_delay()*2.5 << std::endl;
-		std::cout << "Plane 4 delay [ns]: " << tc->get_plane_4_delay()*2.5 << std::endl;
-		std::cout << "Plane 5 delay [ns]: " << tc->get_plane_5_delay()*2.5 << std::endl;
-		std::cout << "Plane 6 delay [ns]: " << tc->get_plane_6_delay()*2.5 << std::endl;
-		std::cout << "Plane 7 delay [ns]: " << tc->get_plane_7_delay()*2.5 << std::endl;
-		std::cout << "Plane 8 delay [ns]: " << tc->get_plane_8_delay()*2.5 << std::endl;
-		std::cout << "Pad delay [ns]: " << tc->get_pad_delay()*2.5 << std::endl << std::endl;
-
-		std::cout << "Handshake delay [ns]: " << tc->get_handshake_delay()*2.5 << std::endl;
-		std::cout << "Handshake mask: " << tc->get_handshake_mask() << std::endl << std::endl;
-
-		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
-		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
-
-		std::cout << "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << std::endl;
-
-		SetStatus(eudaq::Status::LVL_OK, "Configured (" + conf.Name() + ")");
-	}catch (...){
-		printf("Configuration Error\n");
-		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
-	}
-}
-
 
 
 void TUProducer::MainLoop(){
@@ -408,7 +291,7 @@ void TUProducer::OnReset(){
 
 void TUProducer::OnStatus(){
 	if(TUStarted && coincidence_count > 0)
-		m_status.SetTag("TRIG", std::to_string(coincidence_count));
+		m_status.SetTag("COINC_COUNT", std::to_string(coincidence_count));
 	else 
 		m_status.SetTag("TRIG", std::to_string(0));
 
@@ -425,8 +308,143 @@ void TUProducer::OnStatus(){
 		for (int i = 0; i < 10; ++i) {
 			m_status.SetTag("SCALER" + std::to_string(i), std::to_string(input_frequencies[i]));
 		}
+
+		m_status.SetTag("BEAM_CURR", std::to_string(cal_beam_current)); //ok
 	}
 }
+
+
+
+void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
+		std::cout << conf << std::endl;
+
+		m_config = conf;
+
+		std::cout << std::endl << std::endl << std::endl;
+		std::cout << "Config name: " << m_config.Name() << std::endl;
+
+	/*
+	try {
+
+		std::cout << "Debug: Plane 1 delay: " << m_config.Get("plane_1", -1) << std::endl;
+		std::cout << m_config << std::endl;
+		std::cout << std::endl << std::endl << std::endl;
+
+
+		SetStatus(eudaq::Status::LVL_OK, "Wait");
+
+		//open stream to TU
+		std::string ip_adr = m_config.Get("ip_adr", "192.168.1.120");
+		const char *ip = ip_adr.c_str();
+
+		stream->set_ip_adr(ip);
+   		std::cout << "Opening connection to TU @ " << ip << std::endl;
+   		stream->open();
+
+
+   		std::cout << "Configuring (" << m_config.Name() << ").." << std::endl;			
+  		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
+  		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
+		tc->set_scintillator_delay(m_config.Get("scintillator_delay", 100));
+  		tc->set_plane_1_delay(m_config.Get("plane_1", 100));
+  		std::cout << "Debug: Plane 1 delay: " << m_config.Get("plane_1", 100) << std::endl;
+  		tc->set_plane_2_delay(m_config.Get("plane_2", 111));
+  		tc->set_plane_3_delay(m_config.Get("plane_3", 100));
+  		tc->set_plane_4_delay(m_config.Get("plane_4", 100));
+  		tc->set_plane_5_delay(m_config.Get("plane_5", 100));
+  		tc->set_plane_6_delay(m_config.Get("plane_6", 100));
+  		tc->set_plane_7_delay(m_config.Get("plane_7", 100));
+  		tc->set_plane_8_delay(m_config.Get("plane_8", 100));
+  		tc->set_pad_delay(m_config.Get("pad_delay", 100));
+  		tc->set_delays();
+
+  		//generate and set a trigger mask
+  		trg_mask = m_config.Get("pad", 0);
+  		for (unsigned int idx=8; idx>0; idx--){
+  			std::string sname = "plane" + std::to_string(idx);
+  			int tmp = m_config.Get(sname, 0);
+  			trg_mask = (trg_mask<<1)+tmp;
+  		}
+  		trg_mask = (trg_mask<<1)+m_config.Get("scintillator", 0);
+  		std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
+  		tc->set_coincidence_enable(trg_mask);
+
+
+  		std::cout << "--> Setting prescaler and delay." << std::endl;
+		int scal = m_config.Get("prescaler", 1);
+		int predel = m_config.Get("prescaler_delay", 5); //must be >4
+		tc->set_prescaler(scal);
+		tc->set_prescaler_delay(predel);
+
+
+		std::cout << "--> Setting pulser frequency, width and delay." << std::endl;
+		double freq = m_config.Get("pulser_freq", 0);
+		int width = m_config.Get("pulser_width", 0);
+		int puldel = m_config.Get("pulser_delay", 5); //must be > 4
+
+		tc->set_Pulser_width(freq, width);
+		tc->set_pulser_delay(puldel);
+
+
+		std::cout << "--> Setting coincidence pulse and edge width." << std::endl;
+		int copwidth = m_config.Get("coincidence_pulse_width", 10);
+		int coewidth = m_config.Get("coincidence_edge_width", 10);
+		tc->set_coincidence_pulse_width(copwidth);
+		tc->set_coincidence_edge_width(coewidth);
+		tc->send_coincidence_edge_width();
+		tc->send_coincidence_pulse_width();
+
+		int hs_del = m_config.Get("handshake_delay", 0);
+		tc->set_handshake_delay(hs_del);
+		tc->send_handshake_delay();
+
+		int hs_mask = m_config.Get("handshake_mask", 0);
+		tc->set_handshake_mask(hs_mask);
+		tc->send_handshake_mask();
+
+		int trigdel1 = m_config.Get("trig_1_delay", 100);
+		int trigdel2 = m_config.Get("trig_2_delay", 100);
+		int trigdel12 = (trigdel1<<12) | trigdel2;
+		tc->set_trigger_12_delay(trigdel12);
+				
+
+		int trigdel3 = m_config.Get("trig_3_delay", 100);
+		tc->set_trigger_3_delay(trigdel3);
+		tc->set_delays();
+
+		//set current UNIX timestamp
+   		tc->set_time();
+		eudaq::mSleep(1000);
+		SetStatus(eudaq::Status::LVL_OK, "Configured (" + m_config.Name() + ")");
+		
+		std::cout << "--> Readback of values" << std::endl;
+		std::cout << "############################################################" << std::endl;
+		std::cout << "Scintillator delay [ns]: " << tc->get_scintillator_delay()*2.5 << std::endl;
+		std::cout << "Plane 1 delay [ns]: " << tc->get_plane_1_delay()*2.5 << std::endl;
+		std::cout << "Plane 2 delay [ns]: " << tc->get_plane_2_delay()*2.5 << std::endl;
+		std::cout << "Plane 3 delay [ns]: " << tc->get_plane_3_delay()*2.5 << std::endl;
+		std::cout << "Plane 4 delay [ns]: " << tc->get_plane_4_delay()*2.5 << std::endl;
+		std::cout << "Plane 5 delay [ns]: " << tc->get_plane_5_delay()*2.5 << std::endl;
+		std::cout << "Plane 6 delay [ns]: " << tc->get_plane_6_delay()*2.5 << std::endl;
+		std::cout << "Plane 7 delay [ns]: " << tc->get_plane_7_delay()*2.5 << std::endl;
+		std::cout << "Plane 8 delay [ns]: " << tc->get_plane_8_delay()*2.5 << std::endl;
+		std::cout << "Pad delay [ns]: " << tc->get_pad_delay()*2.5 << std::endl << std::endl;
+
+		std::cout << "Handshake delay [ns]: " << tc->get_handshake_delay()*2.5 << std::endl;
+		std::cout << "Handshake mask: " << tc->get_handshake_mask() << std::endl << std::endl;
+
+		std::cout << "Coincidence pulse width [ns]: " << tc->get_coincidence_pulse_width() << std::endl;
+		std::cout << "Coincidence edge width [ns]: " << tc->get_coincidence_edge_width() << std::endl << std::endl;
+
+		std::cout << "--> ##### Configuring TU with settings file (" << conf.Name() << ") done. #####" << std::endl;
+
+		SetStatus(eudaq::Status::LVL_OK, "Configured (" + m_config.Name() + ")");
+	}catch (...){
+		printf("Configuration Error\n");
+		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
+	} */
+}
+
 
 
 

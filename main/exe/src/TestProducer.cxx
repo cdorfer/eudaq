@@ -43,6 +43,7 @@ class TestProducer : public eudaq::Producer {
     virtual void OnConfigure(const eudaq::Configuration & param) {
       std::cout << "Configuring." << std::endl;
       eventsize = param.Get("EventSize", 1);
+      std::cout << "Name of configuration file: " << param.Name() << std::endl;
       eudaq::mSleep(2000);
       EUDAQ_INFO("Configured (" + param.Name() + ")");
       SetStatus(eudaq::Status::LVL_OK, "Configured (" + param.Name() + ")");

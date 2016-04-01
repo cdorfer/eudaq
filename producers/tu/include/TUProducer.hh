@@ -23,8 +23,8 @@ class trigger_controll;
 class TUProducer:public eudaq::Producer{
 public:
 	TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity);
-	virtual void MainLoop();
 	virtual void OnConfigure(const eudaq::Configuration &conf);
+	virtual void MainLoop();
 	virtual void OnStartRun(unsigned param);
 	virtual void OnStopRun();
 	virtual void OnTerminate();
@@ -42,6 +42,7 @@ private:
 	int trg_mask;
 	float cal_beam_current;
 	std::deque<float> avg;
+	eudaq::Configuration m_config;
 
 	//data read back from TU
 	unsigned int trigger_counts[10];
