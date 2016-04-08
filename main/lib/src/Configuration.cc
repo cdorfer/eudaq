@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
+#include <typeinfo>
+
 
 namespace eudaq {
 
@@ -44,48 +46,53 @@ namespace eudaq {
     }
   }
 
-  Configuration & Configuration::operator = (const Configuration & other) {
+Configuration & Configuration::operator = (const Configuration & other) {
     m_config = other.m_config;
     SetSection(other.m_section);
     return *this;
   }
 
-  void Configuration::Load(std::istream & stream, const std::string & section) {
+
+
+  void Configuration::Load(std::istream &stream, const std::string &section) {
     map_t config;
-    section_t * cur_sec = &config[""];
+    section_t *cur_sec = &config[""];
+
     for (;;) {
       std::string line;
       if (stream.eof()) break;
       std::getline(stream, line);
       size_t equals = line.find('=');
-      if (equals == std::string::npos) {
+
+      //deal with lines without '='
+      if(equals == std::string::npos){ //no '=' was found
         line = trim(line);
         if (line == "" || line[0] == ';' || line[0] == '#') continue;
-        if (line[0] == '[' && line[line.length()-1] == ']') {
+        if (line[0] == '[' && line[line.length()-1] == ']'){
           line = std::string(line, 1, line.length()-2);
-          // TODO: check name is alphanumeric?
-          //std::cerr << "Section " << line << std::endl;
           cur_sec = &config[line];
+          //std::cout << "Current section: " << line << std::endl;
         }
-      } else {
-        std::string key = trim(std::string(line, 0, equals));
-        // TODO: check key does not already exist
-        // handle lines like: blah = "foo said ""bar""; ok." # not "baz"
-        line = trim(std::string(line, equals+1));
-        if ((line[0] == '\'' && line[line.length()-1] == '\'') ||
-            (line[0] == '\"' && line[line.length()-1] == '\"')) {
-          line = std::string(line, 1, line.length()-2);
-        } else {
-          size_t i = line.find_first_of(";#");
-          if (i != std::string::npos) line = trim(std::string(line, 0, i));
-        }
-        //std::cerr << "Key " << key << " = " << line << std::endl;
-        (*cur_sec)[key] = line;
       }
-    }
+      else{ //something including a '=' was found
+        if (line == "" || line[0] == ';' || line[0] == '#') continue;
+        std::string key = trim(std::string(line, 0, equals)); //key
+        line = trim(std::string(line, equals+1)); //value
+        if ((line[0] == '\'' && line[line.length()-1] == '\'') || (line[0] == '\"' && line[line.length()-1] == '\"')) {
+          line = std::string(line, 1, line.length()-2); //some cleaning
+        }else{ //no idea what that's supposed to do
+          size_t i = line.find_first_of(";#");
+          if (i != std::string::npos) line = trim(std::string(line, 0, i));}
+
+      (*cur_sec)[key] = line; 
+      //std::cout << "Key: " << key << ", Value: " << line << std::endl;  
+      }//end some '=' was found
+    }//end for
+    
     m_config = config;
     SetSection(section);
   }
+
 
   bool Configuration::SetSection(const std::string & section) const {
     map_t::const_iterator i = m_config.find(section);
@@ -212,6 +219,7 @@ uint64_t Configuration::Get(const std::string & key, uint64_t def) const {
   void Configuration::PrintKeys(std::ostream& out) const{
       return PrintKeys(out,m_section);
   }
+
   void Configuration::PrintKeys(std::ostream& out, const std::string section) const {
               out<<" Keys in "<<section<<": ";
       section_t sec = (m_config.at(section));

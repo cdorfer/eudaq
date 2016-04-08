@@ -34,12 +34,10 @@
 #include "trigger_controll.h"
 
 static const std::string EVENT_TYPE = "TU";
-static const std::string PRODUCER_NAME = "TUProducer";
 typedef eudaq::TUEvent TUEvent;
 
 
 TUProducer::TUProducer(const std::string &name, const std::string &runcontrol, const std::string &verbosity):eudaq::Producer(name, runcontrol),
-	producer_name(PRODUCER_NAME),
 	event_type(EVENT_TYPE),
 	m_run(0), m_ev(0),
 	done(false), TUStarted(false), TUJustStopped(false),
@@ -316,14 +314,13 @@ void TUProducer::OnStatus(){
 
 
 void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
-		std::cout << conf << std::endl;
+		//std::cout << conf << std::endl;
 
 		m_config = conf;
 
 		std::cout << std::endl << std::endl << std::endl;
-		std::cout << "Config name: " << m_config.Name() << std::endl;
+		std::cout << "Config name inside TU producer: " << m_config.Name() << std::endl;
 
-	/*
 	try {
 
 		std::cout << "Debug: Plane 1 delay: " << m_config.Get("plane_1", -1) << std::endl;
@@ -346,15 +343,15 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
   		//enabling/disabling and getting&setting delays for scintillator and planes 1-8 (same order in array)
   		std::cout << "--> Setting delays for scintillator, planes 1-8 and pad." << std::endl;
 		tc->set_scintillator_delay(m_config.Get("scintillator_delay", 100));
-  		tc->set_plane_1_delay(m_config.Get("plane_1", 100));
+  		tc->set_plane_1_delay(m_config.Get("plane1del", 100));
   		std::cout << "Debug: Plane 1 delay: " << m_config.Get("plane_1", 100) << std::endl;
-  		tc->set_plane_2_delay(m_config.Get("plane_2", 111));
-  		tc->set_plane_3_delay(m_config.Get("plane_3", 100));
-  		tc->set_plane_4_delay(m_config.Get("plane_4", 100));
-  		tc->set_plane_5_delay(m_config.Get("plane_5", 100));
-  		tc->set_plane_6_delay(m_config.Get("plane_6", 100));
-  		tc->set_plane_7_delay(m_config.Get("plane_7", 100));
-  		tc->set_plane_8_delay(m_config.Get("plane_8", 100));
+  		tc->set_plane_2_delay(m_config.Get("plane2del", 100));
+  		tc->set_plane_3_delay(m_config.Get("plane3del", 100));
+  		tc->set_plane_4_delay(m_config.Get("plane4del", 100));
+  		tc->set_plane_5_delay(m_config.Get("plane5del", 100));
+  		tc->set_plane_6_delay(m_config.Get("plane6del", 100));
+  		tc->set_plane_7_delay(m_config.Get("plane7del", 100));
+  		tc->set_plane_8_delay(m_config.Get("plane8del", 100));
   		tc->set_pad_delay(m_config.Get("pad_delay", 100));
   		tc->set_delays();
 
@@ -365,6 +362,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
   			int tmp = m_config.Get(sname, 0);
   			trg_mask = (trg_mask<<1)+tmp;
   		}
+
   		trg_mask = (trg_mask<<1)+m_config.Get("scintillator", 0);
   		std::cout << "Debug: Trigger mask: " << trg_mask << std::endl;
   		tc->set_coincidence_enable(trg_mask);
@@ -442,7 +440,7 @@ void TUProducer::OnConfigure(const eudaq::Configuration& conf) {
 	}catch (...){
 		printf("Configuration Error\n");
 		SetStatus(eudaq::Status::LVL_ERROR, "Configuration Error");
-	} */
+	}
 }
 
 

@@ -34,7 +34,7 @@ public:
 
 
 private:
-	std::string producer_name, event_type;
+	std::string event_type;
 	unsigned int m_run, m_ev, m_ev_prev, prev_coincidence_count; //run & event number
 	bool done, TUStarted, TUJustStopped;
 	trigger_controll *tc; //class for TU control from trigger_controll.h

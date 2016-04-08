@@ -36,6 +36,7 @@ int main(int, char ** argv) {
     for (size_t i = 0; i < op.NumArgs(); ++i) {
       reader.addFileReader(op.GetArg(i), ipat.Value());
 	}
+    std::cout << "I am the Converter, and I got executed." << std::endl;
     Configuration config("");
     if (configFileName.Value() != ""){
         std::cout << "Read config file: "<<configFileName.Value()<<std::endl;
